@@ -1,0 +1,17 @@
+{
+  "name": "raft-sqlite",
+  "version": "1.0.0",
+  "description": "A small service leveraging raft-runner (node-zmq-raft) and in-memory webassembly sqlite for a node.js centric raft-replicated sqlite db, similar in spirit to rqlite but with way less capabilities or scope",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Peter Svensson",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "raft-runner": "^1.0",
+    "sqlite3": "^5.1.7"
+  }
+}
