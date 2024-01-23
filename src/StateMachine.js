@@ -7,6 +7,7 @@ module.exports = class StateMachine {
         this.fileName = options.fileName
         this.raftStateCallback = options.raftStateCallback
         this.stateChangedCallback = options.stateChangedCallback
+        this.stateErrorCallback = options.stateErrorCallback
         this.db = new sqlite3.Database(this.fileName);
     }
 
@@ -17,26 +18,26 @@ module.exports = class StateMachine {
         }
     }
 
-    handle(q) {
-        const query = JSON.parse(q)
-        console.log("SQL StateMachine handle: " + query+' typof = '+typeof query);
-        console.dir(query)
-        if(query.statement && query.statement.length) {
-            console.log("SQL StateMachine runs query...");
-            this.db.all(query.statement, function callback(err, rows){
+    handle(query) {        
+        return new Promise((resolve, reject) => {
+            console.log("SQL StateMachine handle: " + query);
+            this.db.all(query, function callback(err, rows){
                 if(err){
                     console.log('SQL StateMachine handle: err = ', err)
+                    if(this.stateErrorCallback){
+                        this.stateErrorCallback(query, err)
+                    }
+                    reject(err)
                 } else {
                     console.log('SQL StateMachine handle: success; ', this)
                     console.dir(rows)
+                    if(this.stateChangedCallback){
+                        this.stateChangedCallback(query, rows)
+                    }
+                    resolve(rows)
                 }
             })
-        } else {
-            console.log("SQL StateMachine handle: no statement in query");
-        }
-        if(this.stateChangedCallback){
-            this.stateChangedCallback(query)
-        }
+        })
     }
 
     handleSnapshot(data) {

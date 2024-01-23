@@ -19,12 +19,16 @@ console.log('id = '+arg_id);
 
 fs.mkdirSync('.db', { recursive: true });
 
+const stateHandler = new StateMachine({fileName:'.db/sqlite_'+arg_port+'.db'})
+
+const SQL_WRITE_STATEMENTS = ['ALTER', 'CREATE', 'DELETE', 'DROP', 'INSERT', 'UPDATE']
+
 const raftRunner = new RaftRunner({
     id: arg_id,
     path: arg_path,
     port: arg_port,
     peers: arg_peers,
-    stateHandler: new StateMachine({fileName: '.db/sqlite_db_'+arg_port}),
+    stateHandler: stateHandler,
     ipAddress: ipAddress
 });
 
@@ -38,8 +42,20 @@ app.use(bodyParser.raw());
 app.post('/query', (req, res) => {
     console.log('--- handle /query: ', req.body)
     if(req.body.q){
-        raftRunner.changeStateMachine({statement:req.body.q})
-        res.send('OK')
+        if(SQL_WRITE_STATEMENTS.some((statement) => req.body.q.toUpperCase().startsWith(statement))){
+            raftRunner.changeStateMachine(req.body.q)
+            res.send('OK')
+        } else {
+            stateHandler.handle(req.body.q).then((rows) => {
+                console.log('rows = ',rows)
+                res.send(rows)
+            }).catch((err) => {
+                console.log('err = ',err)
+                res.send(err)
+            }
+            )
+        }
+        
     } else {
         console.log('no q query param')
         res.send('no q query param')
