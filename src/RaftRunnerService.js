@@ -23,7 +23,7 @@ class RaftRunnerService {
             ipAddress
         });
         this.createExpressHandler()
-        return this.raftRunner;        
+        return this.raftRunner;
     }
 
     createExpressHandler() {
@@ -44,35 +44,55 @@ class RaftRunnerService {
     isWriteStatement(query) { return SQL_WRITE_STATEMENTS.some((statement) => query.toUpperCase().startsWith(statement)) }
 
     getIpAddressForPeerId(peerId) {
-        return this.raftRunner.peers.find(peer => peer.id === peerId).url
+        const peers = this.raftRunner.getPeers().peers
+        console.log('RaftRunnerService --- getIpAddressForPeerId peers == ', peers)
+        /* format of peers; [
+            [ 'id1', 'tcp://192.168.86.210:8041' ],
+            [ 'id2', 'tcp://192.168.86.210:8051' ],
+            [ 'id3', 'tcp://192.168.86.210:8061' ]
+        ],*/
+        
+        const peerRaw = peers.find((peer) => peer[0] === peerId)
+        // extract ip address from peerRaw string
+        const peerAddress = peerRaw[1].split('//')[1].split(':')[0]
+        // extract port
+        const peerPort = parseInt(peerRaw[1].split('//')[1].split(':')[1])+3
+        const peer = [peerId, `http://${peerAddress}:${peerPort}`]
+        console.log('RaftRunnerService --- getIpAddressForPeerId peer = ', peer)
+        return peer[1]
     }
+    
 
     async routeQueryToLeader(query) {
-        const leader = await this.raftRunner.getLeader()
-        console.log('--- routeQueryToLeader leader = ', leader)
+        console.log('RaftRunnerService --- routeQueryToLeader')
+        const leader = this.raftRunner.getLeaderId()
+        console.log('RaftRunnerService --- routeQueryToLeader leader = ', leader)
         // Send query to leader
         const leaderUrl = this.getIpAddressForPeerId(leader)
-        console.log('leaderUrl = ', leaderUrl)
+        console.log('RaftRunnerService --- leaderUrl = ', leaderUrl)
         const result = await axios.post(leaderUrl + '/query', { q: query })
         return result
     }
 
     queryHandler(req, res) {
-        console.log('--- queryHandle /query: ', req.body)
+        console.log('RaftRunnerService --- queryHandle /query: ', req.body)
         if (req.body.q) {
             if (this.isWriteStatement(req.body.q)) {
-                if(this.raftRunner.isLeader){
+                console.log('RaftRunnerService --- detected WRITE statement')
+                if (this.raftRunner.isLeader()) {
+                    console.log('RaftRunnerService --- I am the leader, so changing stateMachine ')
                     this.raftRunner.changeStateMachine(req.body.q)
                     res.send('OK')
                 } else {
-                    this.routeQueryToLeader(req.body.q).then((res)=>{
+                    console.log('RaftRunnerService --- routing query to leader')
+                    this.routeQueryToLeader(req.body.q).then((res) => {
                         res.send(res)
-                    }).catch((err)=>{
+                    }).catch((err) => {
                         res.send(err)
                     })
                 }
-                
-                
+
+
             } else {
                 this.executeLocalQuery(req.body.q, res)
             }
@@ -83,7 +103,7 @@ class RaftRunnerService {
     }
 
     executeLocalQuery(query, res) {
-        console.log('--- execute local query: ', query)
+        console.log('RaftRunnerService --- execute local query: ', query)
         this.raftRunner.stateHandler.handle(query).then((rows) => {
             console.log('rows = ', rows)
             res.send(rows)
