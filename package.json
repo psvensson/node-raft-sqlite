@@ -1,6 +1,6 @@
 {
   "name": "raft-sqlite",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A small service leveraging raft-runner (node-zmq-raft) and in-memory webassembly sqlite for a node.js centric raft-replicated sqlite db, similar in spirit to rqlite but with way less capabilities or scope",
   "main": "index.js",
   "scripts": {
