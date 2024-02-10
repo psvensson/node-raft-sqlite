@@ -2,6 +2,8 @@ const Readable = require('stream').Readable
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs')
 
+// TODO: Change this to use _memory sqlite database instead. The state is alrady in Raft so there's no need to copy it to a file and go slower.
+// This means changing handleSnapshot and chreadeSnapshotReadStream since they now need to execute sql statements on the in-memory database.
 module.exports = class StateMachine {
     constructor(options) {
         console.log('===== SQL StateMachine constructor ')
@@ -51,13 +53,7 @@ module.exports = class StateMachine {
         console.log("===== SQL StateMachine handleSnapshot: " + data);
         // Stop the existing db, remove the old file with name this.filename and save data in a new file with the same name, then recreate database with this.filename as in the constructor
         this.db.close()
-        this.db = null
-        // Remove old file named this.filename        
-        //fs.unlinkSync(this.fileName)
-        // Create a new file named this.filename and write data to it
-        //console.dir(data)
-        //fs.writeFileSync(this.fileName, data)
-        // Recreate database with this.filename as in the constructor
+        this.db = null        
         data.replace(this.fileName)
         this.db = new sqlite3.Database(this.fileName);
     }

@@ -12,14 +12,14 @@ class RaftRunnerService {
         console.log('--- raftRunnerService constructor: ', options)
         console.log('-----------------------------------')
         console.log('-----------------------------------')
-        const { id, path, port, peers, ipAddress, stateChangeCallback, raftStateCallback, fileName } = options;
+        const { id, path, port, peers, ipAddress, stateChangeCallback, raftStateCallback, fileName, stateErrorCallback } = options;
         this.port = port;
         this.raftRunner = new RaftRunner({
             id,
             path,
             port,
             peers,
-            stateHandler: new StateMachine({ fileName, stateChangeCallback, raftStateCallback }),
+            stateHandler: new StateMachine({ fileName, stateChangeCallback, raftStateCallback, stateErrorCallback }),
             ipAddress
         });
         this.createExpressHandler()
@@ -43,6 +43,7 @@ class RaftRunnerService {
 
     isWriteStatement(query) { return SQL_WRITE_STATEMENTS.some((statement) => query.toUpperCase().startsWith(statement)) }
 
+    // TODO: Clean up this logic. There's lower hanging fuit inside of the getPeers() result.
     getIpAddressForPeerId(peerId) {
         const peers = this.raftRunner.getPeers().peers
         console.log('RaftRunnerService --- getIpAddressForPeerId peers == ', peers)
