@@ -13,7 +13,7 @@ class RaftRunnerService {
         console.log('-----------------------------------')
         console.log('-----------------------------------')
         const { id, path, port, peers, ipAddress, stateChangeCallback, raftStateCallback, fileName, stateErrorCallback } = options;
-        this.port = port;
+       
         this.raftRunner = new RaftRunner({
             id,
             path,
@@ -22,23 +22,7 @@ class RaftRunnerService {
             stateHandler: new StateMachine({ fileName, stateChangeCallback, raftStateCallback, stateErrorCallback }),
             ipAddress
         });
-        this.createExpressHandler()
         return this.raftRunner;
-    }
-
-    createExpressHandler() {
-        this.app = require('express')()
-        const bodyParser = require('body-parser');
-
-        this.app.use(bodyParser.json());
-        this.app.use(bodyParser.raw());
-
-        this.app.post('/query', this.queryHandler.bind(this))
-
-        const port = this.port + 3
-        this.app.listen(port, () => {
-            console.log(`Example app listening on port ${port}`)
-        })
     }
 
     isWriteStatement(query) { return SQL_WRITE_STATEMENTS.some((statement) => query.toUpperCase().startsWith(statement)) }
@@ -52,17 +36,16 @@ class RaftRunnerService {
             [ 'id2', 'tcp://192.168.86.210:8051' ],
             [ 'id3', 'tcp://192.168.86.210:8061' ]
         ],*/
-        
+
         const peerRaw = peers.find((peer) => peer[0] === peerId)
         // extract ip address from peerRaw string
         const peerAddress = peerRaw[1].split('//')[1].split(':')[0]
         // extract port
-        const peerPort = parseInt(peerRaw[1].split('//')[1].split(':')[1])+3
+        const peerPort = parseInt(peerRaw[1].split('//')[1].split(':')[1]) + 3
         const peer = [peerId, `http://${peerAddress}:${peerPort}`]
         console.log('RaftRunnerService --- getIpAddressForPeerId peer = ', peer)
         return peer[1]
     }
-    
 
     async routeQueryToLeader(query) {
         console.log('RaftRunnerService --- routeQueryToLeader')
@@ -75,31 +58,21 @@ class RaftRunnerService {
         return result
     }
 
-    queryHandler(req, res) {
-        console.log('RaftRunnerService --- queryHandle /query: ', req.body)
-        if (req.body.q) {
-            if (this.isWriteStatement(req.body.q)) {
-                console.log('RaftRunnerService --- detected WRITE statement')
-                if (this.raftRunner.isLeader()) {
-                    console.log('RaftRunnerService --- I am the leader, so changing stateMachine ')
-                    this.raftRunner.changeStateMachine(req.body.q)
-                    res.send('OK')
-                } else {
-                    console.log('RaftRunnerService --- routing query to leader')
-                    this.routeQueryToLeader(req.body.q).then((res) => {
-                        res.send(res)
-                    }).catch((err) => {
-                        res.send(err)
-                    })
-                }
-
-
+    async queryHandler(query) {
+        console.log('RaftRunnerService --- queryHandle /query: ', query)
+        if (this.isWriteStatement(query)) {
+            console.log('RaftRunnerService --- detected WRITE statement')
+            if (this.raftRunner.isLeader()) {
+                console.log('RaftRunnerService --- I am the leader, so changing stateMachine ')
+                this.raftRunner.changeStateMachine(query)
+                return 'OK'
             } else {
-                this.executeLocalQuery(req.body.q, res)
+                console.log('RaftRunnerService --- routing query to leader')
+                return this.routeQueryToLeader(query)
             }
+
         } else {
-            console.log('no q query param')
-            res.send('no q query param')
+            return this.executeLocalQuery(req.body.q, res)
         }
     }
 
