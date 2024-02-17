@@ -1,3 +1,6 @@
 const RaftStateMachine = require('raft-state-machine')
+const RaftRunnerService = require('raft-runner-service')
 
-module.exports = {RaftStateMachine}
+// index.js
+
+module.exports = { RaftStateMachine, RaftRunnerService }

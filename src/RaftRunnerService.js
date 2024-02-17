@@ -5,6 +5,7 @@ const StateMachine = require('./StateMachine')
 
 const SQL_WRITE_STATEMENTS = ['ALTER', 'CREATE', 'DELETE', 'DROP', 'INSERT', 'UPDATE']
 
+// TODO: add option for db schema, whih can be passed to the StateMachine.
 class RaftRunnerService {
     constructor(options) {
         console.log('-----------------------------------')
@@ -12,14 +13,14 @@ class RaftRunnerService {
         console.log('--- raftRunnerService constructor: ', options)
         console.log('-----------------------------------')
         console.log('-----------------------------------')
-        const { id, path, port, peers, ipAddress, stateChangeCallback, raftStateCallback, fileName, stateErrorCallback } = options;
+        const { id, path, port, peers, ipAddress, stateChangeCallback, raftStateCallback, fileName, stateErrorCallback, schema } = options;
        
         this.raftRunner = new RaftRunner({
             id,
             path,
             port,
             peers,
-            stateHandler: new StateMachine({ fileName, stateChangeCallback, raftStateCallback, stateErrorCallback }),
+            stateHandler: new StateMachine({ fileName, stateChangeCallback, raftStateCallback, stateErrorCallback, schema }),
             ipAddress
         });
         return this.raftRunner;
